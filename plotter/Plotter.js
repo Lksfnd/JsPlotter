@@ -1,9 +1,17 @@
+/*
+ *  TODOS:
+ * 
+ *      * Fix negative value display
+ *      * Finish automatic scaling 
+ */
 const AUTO_FIND = 'FIND_AUTO';
 class Plotter {
     constructor(canvas, theme = PlotTheme.DEFAULT) {
         this.canvas = canvas;
         this._theme = theme;
         this._ctx = canvas.getContext("2d");
+        this._index = 0;
+        this._plotData = {};
     }
 
     plotFunction(fnc, minValue, maxValue, axePosition) {
@@ -11,6 +19,9 @@ class Plotter {
         let c = this.canvas;
         let ctx = this._ctx;
         const t = this._theme;
+        this._plotData = {};
+        ctx.clearRect(0,0,c.width,c.height);
+        this._index = 0;
         // Setup
         this._applyTheme();
         // Calculations
@@ -61,8 +72,11 @@ class Plotter {
         /**
          * Draw graph
          */
-        this._applyStrokeStyle(0);
+        /*this._applyStrokeStyle(0);
         for(let x = 0; x < values.length; x++) {
+            if(maxValue.y === AUTO_FIND) {
+                maxValue.y = maxVal;
+            }
             const y = values[x].y / maxValue.y;
             if(x==0) {
                 ctx.moveTo(view.left + x, int(view.height + view.top - y * view.height));
@@ -70,7 +84,43 @@ class Plotter {
                 ctx.lineTo(view.left + x, int(view.height + view.top - y * view.height));
             }
         }
+        ctx.stroke();*/
+
+        this._plotData = {
+            minValue,
+            maxValue,
+            resolution,
+            view,
+            maxVal
+        };
+        this.addPlot(fnc);
+    }
+
+    addPlot(fnc) {
+        const d = this._plotData;
+        const values = this._getValues(fnc,d.minValue.x,d.maxValue.x,d.resolution);
+        let ctx = this._ctx;
+        const t = this._theme; 
+
+        this._applyStrokeStyle(this._index);
+        for(let x = 0; x < values.length; x++) {
+            if(d.maxValue.y === AUTO_FIND) {
+                d.maxValue.y = d.maxVal;
+            }
+            const y = values[x].y / d.maxValue.y;
+            let yPix = int(d.view.height + d.view.top - y * d.view.height);
+            if(yPix < d.view.top) {
+                continue;
+            }
+            if(x==0) {
+                ctx.moveTo(d.view.left + x, yPix);
+            } else {
+                ctx.lineTo(d.view.left + x, yPix);
+            }
+        }
         ctx.stroke();
+        this._index++;
+        this._index %= t.stroke.length;
     }
 
     _applyStrokeStyle(index) {
